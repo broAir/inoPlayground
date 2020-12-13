@@ -9,26 +9,36 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наи
 
 dht DHT;
 
+// Pinouts
 #define DHT11_PIN 7
 
-int TEMPERATURE_Setting = 25;
-int TEMPERATURE_Delta = 1;
+#define RED_LED_PIN 11;
+#define BLUE_LED_PIN 13;
+#define GREEN_LED_PIN 12;
+
+#define HEATER_RELAY_PIN 1;
+#define FAN_RELAY_PIN 1;
+
+#define LED_LIGHT_RELAY_PIN 1;
+// System
+#define DHT11_FAIL_COUNTER 0;
+#define DHT11_FAIL_MAX 10;
+
+#define CYCLE_LENGTH 5000; // 5 secound loop
+
+int TEMPERATURE_SETTING = 25;
+int Dt_SETTING = 1;
 bool TEMPSERVICE_LOCK = false;
 
-int RED_LED_PIN = 11;
-int BLUE_LED_PIN = 13;
-int GREEN_LED_PIN = 12;
-
-int DHT11_Fail_Count = 0;
-int DHT11_Fail_Max = 10;
 void setup()
 {
   // put your setup code here, to run once:
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(BLUE_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
-
-  srand(time(NULL));
+  pinMode(HEATER_RELAY_PIN, OUTPUT);
+  pinMode(FAN_RELAY_PIN, OUTPUT);
+  pinMode(LED_LIGHT_RELAY_PIN, OUTPUT);
 
   Serial.begin(9600);
 
@@ -42,82 +52,67 @@ void setup()
 
 void loop()
 {
+  handleDHT();
 
-  // digitalWrite(12, HIGH);
-  // delay(rand()%5*10);
+  handleUserInput();
 
-  // digitalWrite(12, LOW);
+  delay(CYCLE_LENGTH);
+}
 
-  // delay(rand()%5*10);
-
+void handleDHT() {
   int chk = DHT.read11(DHT11_PIN);
 
-  if ((DHT.temperature > -25) && (DHT.humidity > -25))
-  {
+  if ((DHT.temperature > -25) && (DHT.humidity > -25)) {
+    DHT11_FAIL_COUNTER = 0; // Reset the fail counter
 
-    checkTemp(DHT.temperature);
+    handleTemp(DHT.temperature);
 
     printDhtValues();
-    DHT11_Fail_Count = 0;
   }
-  else
-  {
-    DHT11_Fail_Count++;
-    if (DHT11_Fail_Count > DHT11_Fail_Max)
-    {
-
-      lcd.setCursor(0, 0);
-      lcd.print("DHT11 FAIL");
-    }
+  else {
+    handleDHTfailure();
   }
-  delay(5000);
 }
 
-void checkTemp(int temp)
-{
-  int dt = TEMPERATURE_Setting - temp;
-  if (dt > TEMPERATURE_Delta)
-  {
-    heat();
-  }
-  else if (dt < -TEMPERATURE_Delta)
-  {
+void handleTemp(int temp) {
+  int dt = temp - TEMPERATURE_SETTING;
+  if (dt > Dt_SETTING) { // if dt is positive and bigger than the setting = we need to cool
     coolDown();
   }
-  else
-  {
-
+  else if (-dt > Dt_SETTING) { // if dt is negative and less that the setting = we need to heat
+    heat();
+  }
+  else { // if there is no significant difference between temps - turn off everything
     TEMPSERVICE_LOCK = false;
-    digitalWrite(BLUE_LED_PIN, LOW);
-    digitalWrite(RED_LED_PIN, LOW);
+
+    turnOFF(BLUE_LED_PIN);
+    turnOFF(FAN_RELAY_PIN);
+    turnOFF(RED_LED_PIN);
+    turnOFF(HEATER_RELAY_PIN);
   }
 }
 
-void heat()
-{
-  if (!TEMPSERVICE_LOCK)
-  {
-    TEMPSERVICE_LOCK = true;
-    togglePin(RED_LED_PIN);
-  }
-}
-void coolDown()
-{
-  if (!TEMPSERVICE_LOCK)
-  {
-    TEMPSERVICE_LOCK = true;
-    togglePin(BLUE_LED_PIN);
-    Serial.print("Cooling down");
-  }
+void heat() {
+  if(TEMPSERVICE_LOCK)
+    return;
+  
+  TEMPSERVICE_LOCK = true;
+  turnON(HEATER_RELAY_PIN);
+  turnON(RED_LED_PIN);
+  Serial.print("Heating up ...");
 }
 
-void togglePin(int pin)
-{
-  digitalWrite(pin, !digitalRead(pin));
+void coolDown() {
+  if(TEMPSERVICE_LOCK)
+    return;
+  
+  TEMPSERVICE_LOCK = true;
+  turnON(FAN_RELAY_PIN);
+  turnON(BLUE_LED_PIN);
+  Serial.print("Cooling down ...");
 }
 
-void printDhtValues()
-{
+void printDhtValues() {
   int temp = DHT.temperature;
   int hum = DHT.humidity;
   Serial.print("Temperature = ");
@@ -125,8 +120,7 @@ void printDhtValues()
   Serial.print("Humidity = ");
   Serial.println(hum);
 
-  if ((DHT.temperature > -25) && (DHT.humidity > -25))
-  {
+  if ((DHT.temperature > -25) && (DHT.humidity > -25)) {
     // Устанавливаем курсор на вторую строку и нулевой символ.
     lcd.setCursor(0, 1);
     // Выводим на экран количество секунд с момента запуска ардуины
@@ -138,4 +132,50 @@ void printDhtValues()
     // Устанавливаем курсор на 1 строку и нулевой символ.
     lcd.setCursor(0, 0);
   }
+}
+
+void handleDHTfailure() {
+  DHT11_FAIL_COUNTER++;
+    if (DHT11_FAIL_COUNTER > DHT11_FAIL_MAX) {
+      lcd.setCursor(0, 0);
+      lcd.print("DHT11 FAIL");
+    }
+}
+
+void handleUserInput() {
+  char* inpt = "";
+  switch (inpt) {
+    case "tf":
+      toggleFan();
+      break;
+    case "tl":
+      toggleLight();
+    default:
+      break;
+  }
+}
+
+void toggleFan() {
+  togglePin(FAN_RELAY_PIN);
+  togglePin(BLUE_LED_PIN);
+}
+
+void toggleLight() {
+  togglePin(LED_LIGHT_RELAY_PIN);
+}
+
+void setTemp(int t) {
+  TEMPERATURE_SETTING = t;
+}
+
+void turnON(int pin) {
+  digitalWrite(pin, HIGH);
+}
+
+void turnOFF(int pin) {
+  digitalWrite(pin, LOW);
+}
+
+void togglePin(int pin) {
+  digitalWrite(pin, !digitalRead(pin));
 }
