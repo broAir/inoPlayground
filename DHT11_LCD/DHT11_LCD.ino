@@ -1,4 +1,3 @@
-#include <time.h>
 #include <dht.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h> // Подключение библиотеки
@@ -12,19 +11,20 @@ dht DHT;
 // Pinouts
 #define DHT11_PIN 7
 
-#define RED_LED_PIN 11;
-#define BLUE_LED_PIN 13;
-#define GREEN_LED_PIN 12;
+#define RED_LED_PIN 11
+#define BLUE_LED_PIN 13
+#define GREEN_LED_PIN 12
 
-#define HEATER_RELAY_PIN 1;
-#define FAN_RELAY_PIN 1;
+#define HEATER_RELAY_PIN 1
+#define FAN_RELAY_PIN 9
 
-#define LED_LIGHT_RELAY_PIN 1;
+#define LED_LIGHT_RELAY_PIN 1
 // System
-#define DHT11_FAIL_COUNTER 0;
-#define DHT11_FAIL_MAX 10;
+#define DHT11_FAIL_MAX 10
 
-#define CYCLE_LENGTH 5000; // 5 secound loop
+#define CYCLE_LENGTH 5000 // 5 secound loop
+
+int DHT11_FAIL_COUNTER = 0;
 
 int TEMPERATURE_SETTING = 25;
 int Dt_SETTING = 1;
@@ -143,15 +143,15 @@ void handleDHTfailure() {
 }
 
 void handleUserInput() {
-  char* inpt = "";
-  switch (inpt) {
-    case "tf":
+  char inpt[] = "";
+  
+  if (strcmp(inpt, "tf") == 0) {
       toggleFan();
-      break;
-    case "tl":
-      toggleLight();
-    default:
-      break;
+  } 
+  else if (strcmp(inpt, "tl") == 0) {
+        toggleLight();
+  }
+  else {
   }
 }
 
