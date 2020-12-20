@@ -1,10 +1,11 @@
 #include <dht.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h> // Подключение библиотеки
-//#include <LiquidCrystal_PCF8574.h> // Подключение альтернативной библиотеки
+#include <SoftwareSerial.h>
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой
 //LiquidCrystal_PCF8574 lcd(0x27); // Вариант для библиотеки PCF8574
+SoftwareSerial BT(4, 3); // RX, TX
 
 dht DHT;
 
@@ -30,6 +31,10 @@ int TEMPERATURE_SETTING = 25;
 int Dt_SETTING = 1;
 bool TEMPSERVICE_LOCK = false;
 
+
+String BT_MSG; // the data given from Computer
+ 
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -40,7 +45,10 @@ void setup()
   pinMode(FAN_RELAY_PIN, OUTPUT);
   pinMode(LED_LIGHT_RELAY_PIN, OUTPUT);
 
-  Serial.begin(9600);
+
+  BT.begin(9600);
+  BT.println("Bluetooth On please press 1 or 0 blink LED ..");
+
 
   lcd.init();          // Инициализация дисплея
   lcd.backlight();     // Подключение подсветки
@@ -143,16 +151,30 @@ void handleDHTfailure() {
 }
 
 void handleUserInput() {
-  char inpt[] = "";
+
+   if (BT.available())
+  {
+      BT_MSG=BT.readString();
+      BT.println(BT_MSG);
+      
+      lcd.setCursor(0, 0);
+      lcd.print(BT_MSG);
+      if(BT_MSG=="1")
+      { 
+        BT.println("LED  On D13 ON ! ");
+      }
+  }
   
-  if (strcmp(inpt, "tf") == 0) {
+  if (BT_MSG == "tf") {
       toggleFan();
+      
   } 
-  else if (strcmp(inpt, "tl") == 0) {
+  else if (BT_MSG == "tl") {
         toggleLight();
   }
   else {
   }
+BT_MSG = "";
 }
 
 void toggleFan() {
