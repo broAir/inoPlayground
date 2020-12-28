@@ -1,0 +1,6 @@
+{
+    "board": "arduino:avr:uno",
+    "port": "COM7",
+    "programmer": "AVR ISP",
+    "sketch": "DHT11_LCD\\DHT11_LCD.ino"
+}
