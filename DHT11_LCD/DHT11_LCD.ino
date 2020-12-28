@@ -1,12 +1,12 @@
 #include <dht.h>
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h> // Подключение библиотеки
+#include <LiquidCrystal_I2C.h>
 #include <SoftwareSerial.h>
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой
-//LiquidCrystal_PCF8574 lcd(0x27); // Вариант для библиотеки PCF8574
-SoftwareSerial BT(4, 3); // RX, TX
+#include "monitor.hpp"
 
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой
+SoftwareSerial BT(4, 3);            // RX, TX
 dht DHT;
 
 // Pinouts
@@ -31,9 +31,7 @@ int TEMPERATURE_SETTING = 25;
 int Dt_SETTING = 1;
 bool TEMPSERVICE_LOCK = false;
 
-
 String BT_MSG; // the data given from Computer
- 
 
 void setup()
 {
@@ -45,17 +43,16 @@ void setup()
   pinMode(FAN_RELAY_PIN, OUTPUT);
   pinMode(LED_LIGHT_RELAY_PIN, OUTPUT);
 
-
   BT.begin(9600);
   BT.println("Bluetooth On please press 1 or 0 blink LED ..");
 
-
+  Serial.begin(9600);
   lcd.init();          // Инициализация дисплея
   lcd.backlight();     // Подключение подсветки
   lcd.setCursor(0, 0); // Установка курсора в начало первой строки
-  //lcd.print("Hello");       // Набор текста на первой строке
   lcd.setCursor(0, 1); // Установка курсора в начало второй строки
-  //lcd.print("ArduinoMaster");
+
+  setupBluetoothMonitor(BT, DHT);
 }
 
 void loop()
@@ -64,33 +61,47 @@ void loop()
 
   handleUserInput();
 
+  updateMonitor();
+
   delay(CYCLE_LENGTH);
 }
 
-void handleDHT() {
+void updateMonitor()
+{
+  updateBluetoothMonitor();
+}
+
+void handleDHT()
+{
   int chk = DHT.read11(DHT11_PIN);
 
-  if ((DHT.temperature > -25) && (DHT.humidity > -25)) {
+  if ((DHT.temperature > -25) && (DHT.humidity > -25))
+  {
     DHT11_FAIL_COUNTER = 0; // Reset the fail counter
 
     handleTemp(DHT.temperature);
 
     printDhtValues();
   }
-  else {
+  else
+  {
     handleDHTfailure();
   }
 }
 
-void handleTemp(int temp) {
+void handleTemp(int temp)
+{
   int dt = temp - TEMPERATURE_SETTING;
-  if (dt > Dt_SETTING) { // if dt is positive and bigger than the setting = we need to cool
+  if (dt > Dt_SETTING)
+  { // if dt is positive and bigger than the setting = we need to cool
     coolDown();
   }
-  else if (-dt > Dt_SETTING) { // if dt is negative and less that the setting = we need to heat
+  else if (-dt > Dt_SETTING)
+  { // if dt is negative and less that the setting = we need to heat
     heat();
   }
-  else { // if there is no significant difference between temps - turn off everything
+  else
+  { // if there is no significant difference between temps - turn off everything
     TEMPSERVICE_LOCK = false;
 
     turnOFF(BLUE_LED_PIN);
@@ -100,27 +111,30 @@ void handleTemp(int temp) {
   }
 }
 
-void heat() {
-  if(TEMPSERVICE_LOCK)
+void heat()
+{
+  if (TEMPSERVICE_LOCK)
     return;
-  
+
   TEMPSERVICE_LOCK = true;
   turnON(HEATER_RELAY_PIN);
   turnON(RED_LED_PIN);
   Serial.print("Heating up ...");
 }
 
-void coolDown() {
-  if(TEMPSERVICE_LOCK)
+void coolDown()
+{
+  if (TEMPSERVICE_LOCK)
     return;
-  
+
   TEMPSERVICE_LOCK = true;
   turnON(FAN_RELAY_PIN);
   turnON(BLUE_LED_PIN);
   Serial.print("Cooling down ...");
 }
 
-void printDhtValues() {
+void printDhtValues()
+{
   int temp = DHT.temperature;
   int hum = DHT.humidity;
   Serial.print("Temperature = ");
@@ -128,7 +142,8 @@ void printDhtValues() {
   Serial.print("Humidity = ");
   Serial.println(hum);
 
-  if ((DHT.temperature > -25) && (DHT.humidity > -25)) {
+  if ((DHT.temperature > -25) && (DHT.humidity > -25))
+  {
     // Устанавливаем курсор на вторую строку и нулевой символ.
     lcd.setCursor(0, 1);
     // Выводим на экран количество секунд с момента запуска ардуины
@@ -142,62 +157,81 @@ void printDhtValues() {
   }
 }
 
-void handleDHTfailure() {
+void handleDHTfailure()
+{
   DHT11_FAIL_COUNTER++;
-    if (DHT11_FAIL_COUNTER > DHT11_FAIL_MAX) {
-      lcd.setCursor(0, 0);
-      lcd.print("DHT11 FAIL");
-    }
-}
-
-void handleUserInput() {
-
-   if (BT.available())
+  if (DHT11_FAIL_COUNTER > DHT11_FAIL_MAX)
   {
-      BT_MSG=BT.readString();
-      BT.println(BT_MSG);
-      
-      lcd.setCursor(0, 0);
-      lcd.print(BT_MSG);
-      if(BT_MSG=="1")
-      { 
-        BT.println("LED  On D13 ON ! ");
-      }
+    lcd.setCursor(0, 0);
+    lcd.print("DHT11 FAIL");
   }
-  
-  if (BT_MSG == "tf") {
-      toggleFan();
-      
-  } 
-  else if (BT_MSG == "tl") {
-        toggleLight();
-  }
-  else {
-  }
-BT_MSG = "";
 }
 
-void toggleFan() {
+void handleUserInput()
+{
+  if (BT.available())
+  {
+    BT_MSG = BT.readString();
+
+    Serial.println(BT_MSG);
+
+    lcd.setCursor(0, 0);
+    lcd.print(BT_MSG);
+    if (BT_MSG == "1")
+    {
+      BT.println("LED  On D13 ON ! ");
+    }
+    if (BT_MSG == "start")
+    {
+      toggleBluetoothMonitor(true);
+    }
+    else if (BT_MSG == "stop")
+    {
+      toggleBluetoothMonitor(false);
+    }
+    else if (BT_MSG == "tf")
+    {
+      toggleFan();
+    }
+    else if (BT_MSG == "tl")
+    {
+      toggleLight();
+    }
+    else
+    {
+    }
+  }
+
+  BT_MSG = "";
+}
+
+void toggleFan()
+{
   togglePin(FAN_RELAY_PIN);
   togglePin(BLUE_LED_PIN);
 }
 
-void toggleLight() {
+void toggleLight()
+{
   togglePin(LED_LIGHT_RELAY_PIN);
 }
 
-void setTemp(int t) {
+void setTemp(int t)
+{
   TEMPERATURE_SETTING = t;
 }
 
-void turnON(int pin) {
+void turnON(int pin)
+{
   digitalWrite(pin, HIGH);
 }
 
-void turnOFF(int pin) {
+void turnOFF(int pin)
+{
   digitalWrite(pin, LOW);
 }
 
-void togglePin(int pin) {
+void togglePin(int pin)
+{
   digitalWrite(pin, !digitalRead(pin));
 }
