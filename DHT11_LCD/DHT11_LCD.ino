@@ -51,8 +51,6 @@ void setup()
   lcd.backlight();     // Подключение подсветки
   lcd.setCursor(0, 0); // Установка курсора в начало первой строки
   lcd.setCursor(0, 1); // Установка курсора в начало второй строки
-
-  setupBluetoothMonitor(BT, DHT);
 }
 
 void loop()
@@ -68,7 +66,7 @@ void loop()
 
 void updateMonitor()
 {
-  updateBluetoothMonitor();
+  updateBluetoothMonitor(BT, DHT);
 }
 
 void handleDHT()
