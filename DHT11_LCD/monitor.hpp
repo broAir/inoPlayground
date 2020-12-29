@@ -23,6 +23,11 @@ void updateBluetoothMonitor(SoftwareSerial &bluetooth, dht &btdht)
     {
         int temp = btdht.temperature;
         int hum = btdht.humidity;
+
+        bool isHeating = digitalRead(HEATER_RELAY_PIN) == HIGH;
+        bool isFanning = digitalRead(FAN_RELAY_PIN) == HIGH;
+        bool isLED = digitalRead(LED_LIGHT_RELAY_PIN) == HIGH;
+        
         static unsigned long lastRefreshTime = 0;
 
         if (millis() - lastRefreshTime >= 1000)
@@ -44,6 +49,15 @@ void updateBluetoothMonitor(SoftwareSerial &bluetooth, dht &btdht)
                 bluetooth.write('t');
                 bluetooth.write(static_cast<byte>(temp));
                 bluetooth.write(static_cast<byte>(hum));
+                
+                bluetooth.write('f');
+                bluetooth.write(static_cast<byte>(isFanning));
+                
+                bluetooth.write('h');
+                bluetooth.write(static_cast<byte>(isHeating));
+                
+                bluetooth.write('l');
+                bluetooth.write(static_cast<byte>(isLED));
             }
         }
     }
