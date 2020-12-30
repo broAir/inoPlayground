@@ -50,13 +50,13 @@ void updateBluetoothMonitor(SoftwareSerial &bluetooth, dht &btdht)
                 bluetooth.write(static_cast<byte>(temp));
                 bluetooth.write(static_cast<byte>(hum));
                 
-                bluetooth.write('f');
+                //bluetooth.write('f');
                 bluetooth.write(static_cast<byte>(isFanning));
                 
-                bluetooth.write('h');
+                //bluetooth.write('h');
                 bluetooth.write(static_cast<byte>(isHeating));
                 
-                bluetooth.write('l');
+                //bluetooth.write('l');
                 bluetooth.write(static_cast<byte>(isLED));
             }
         }
