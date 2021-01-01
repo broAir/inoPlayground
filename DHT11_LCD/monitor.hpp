@@ -10,10 +10,10 @@
 #define BLUE_LED_PIN 13
 #define GREEN_LED_PIN 12
 
-#define HEATER_RELAY_PIN 1
+#define HEATER_RELAY_PIN 10
 #define FAN_RELAY_PIN 9
 
-#define LED_LIGHT_RELAY_PIN 1
+#define LED_LIGHT_RELAY_PIN 7
 
 bool doUpdateStatus = false;
 
@@ -24,9 +24,13 @@ void updateBluetoothMonitor(SoftwareSerial &bluetooth, dht &btdht)
         int temp = btdht.temperature;
         int hum = btdht.humidity;
 
-        bool isHeating = digitalRead(HEATER_RELAY_PIN) == HIGH;
-        bool isFanning = digitalRead(FAN_RELAY_PIN) == HIGH;
-        bool isLED = digitalRead(LED_LIGHT_RELAY_PIN) == HIGH;
+        Serial.print(digitalRead(HEATER_RELAY_PIN));
+        Serial.print(digitalRead(FAN_RELAY_PIN));
+        Serial.print(digitalRead(LED_LIGHT_RELAY_PIN));
+        
+        int isHeating = digitalRead(HEATER_RELAY_PIN);
+        int isFanning = digitalRead(FAN_RELAY_PIN);
+        int isLED = digitalRead(LED_LIGHT_RELAY_PIN);
         
         static unsigned long lastRefreshTime = 0;
 

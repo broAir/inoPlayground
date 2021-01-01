@@ -16,18 +16,19 @@ dht DHT;
 #define BLUE_LED_PIN 13
 #define GREEN_LED_PIN 12
 
-#define HEATER_RELAY_PIN 1
+#define HEATER_RELAY_PIN 10
 #define FAN_RELAY_PIN 9
 
-#define LED_LIGHT_RELAY_PIN 1
+#define LED_LIGHT_RELAY_PIN 7
 // System
 #define DHT11_FAIL_MAX 10
 
 #define CYCLE_LENGTH 5000 // 5 secound loop
+#define PRINT_STATUS true // debug info
 
 int DHT11_FAIL_COUNTER = 0;
 
-int TEMPERATURE_SETTING = 25;
+int TEMPERATURE_SETTING = 24;
 int Dt_SETTING = 1;
 bool TEMPSERVICE_LOCK = false;
 
@@ -61,6 +62,9 @@ void loop()
 
   updateMonitor();
 
+  if(PRINT_STATUS) {
+    printStatus();
+  }
   delay(CYCLE_LENGTH);
 }
 
@@ -129,6 +133,17 @@ void coolDown()
   turnON(FAN_RELAY_PIN);
   turnON(BLUE_LED_PIN);
   Serial.print("Cooling down ...");
+}
+
+void printStatus(){
+  
+    lcd.setCursor(1, 0);
+    lcd.print(digitalRead(HEATER_RELAY_PIN));
+    lcd.setCursor(2, 0);
+    lcd.print(digitalRead(FAN_RELAY_PIN));
+    lcd.setCursor(3, 0);
+    lcd.print(digitalRead(LED_LIGHT_RELAY_PIN));
+    
 }
 
 void printDhtValues()
