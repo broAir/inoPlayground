@@ -2,9 +2,11 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <SoftwareSerial.h>
+#include "GyverTimer.h"
 
 #include "monitor.hpp"
 
+GTimer myTimer(MS);
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой
 SoftwareSerial BT(4, 3);            // RX, TX
 dht DHT;
@@ -26,11 +28,15 @@ dht DHT;
 #define CYCLE_LENGTH 5000 // 5 secound loop
 #define PRINT_STATUS true // debug info
 
-int DHT11_FAIL_COUNTER = 0;
+int DHT11_FAIL_COUNTER = 0; // debug info
 
 int TEMPERATURE_SETTING = 24;
 int Dt_SETTING = 1;
-bool TEMPSERVICE_LOCK = false;
+
+bool TEMPSERVICE_LOCK = false; // to lock the climate control if we already heat or cool down the system
+bool USER_FAN_LOCK = false; // if user has requested fanning in the app
+int USER_FAN_LOCK_TIME; // 
+int USER_FAN_LOCK_DT = 1000*60; // 1 minute user fan lock
 
 String BT_MSG; // the data given from Computer
 
@@ -103,11 +109,19 @@ void handleTemp(int temp)
     heat();
   }
   else
-  { // if there is no significant difference between temps - turn off everything
+  { 
+    // if there is no significant difference between temps - turn off everything
     TEMPSERVICE_LOCK = false;
+    
+    if(USER_FAN_LOCK && myTimer.isReady()) {
+      USER_FAN_LOCK = false;
+    } 
+    
+    if(!USER_FAN_LOCK) { 
+      turnOFF(BLUE_LED_PIN);
+      turnOFF(FAN_RELAY_PIN);
+    }
 
-    turnOFF(BLUE_LED_PIN);
-    turnOFF(FAN_RELAY_PIN);
     turnOFF(RED_LED_PIN);
     turnOFF(HEATER_RELAY_PIN);
   }
@@ -204,11 +218,15 @@ void handleUserInput()
     }
     else if (BT_MSG == "tf")
     {
-      toggleFan();
+      toggleFan(true);
     }
     else if (BT_MSG == "tl")
     {
       toggleLight();
+    }
+    else if( BT_MSG.indexOf("set")>=0)
+    {
+
     }
     else
     {
@@ -218,8 +236,12 @@ void handleUserInput()
   BT_MSG = "";
 }
 
-void toggleFan()
+void toggleFan(bool userAction)
 {
+  if(userAction) {
+    USER_FAN_LOCK = true;
+    myTimer.setTimeout(USER_FAN_LOCK_DT); 
+  }
   togglePin(FAN_RELAY_PIN);
   togglePin(BLUE_LED_PIN);
 }
