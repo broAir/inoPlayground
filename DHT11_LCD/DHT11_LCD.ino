@@ -2,15 +2,16 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <SoftwareSerial.h>
-#include "GyverTimer.h"
+#include <GyverTimer.h>
 
 #include "monitor.hpp"
+#include "dataCollector.hpp"
 
 GTimer myTimer(MS);
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Указываем I2C адрес (наиболее распространенное значение), а также параметры экрана (в случае LCD 1602 - 2 строки по 16 символов в каждой
 SoftwareSerial BT(4, 3);            // RX, TX
 dht DHT;
-
+HistoryManager DhtHistory;
 // Pinouts
 #define DHT11_PIN 7
 
@@ -35,7 +36,6 @@ int Dt_SETTING = 1;
 
 bool TEMPSERVICE_LOCK = false; // to lock the climate control if we already heat or cool down the system
 bool USER_FAN_LOCK = false; // if user has requested fanning in the app
-int USER_FAN_LOCK_TIME; // 
 int USER_FAN_LOCK_DT = 1000*60; // 1 minute user fan lock
 
 String BT_MSG; // the data given from Computer
@@ -88,7 +88,7 @@ void handleDHT()
     DHT11_FAIL_COUNTER = 0; // Reset the fail counter
 
     handleTemp(DHT.temperature);
-
+    storeDhtHistory();
     printDhtValues();
   }
   else
@@ -160,6 +160,12 @@ void printStatus(){
     
 }
 
+void storeDhtHistory(){
+  int temp = DHT.temperature;
+  int hum = DHT.humidity;
+  DhtHistory.add(temp, hum);
+}
+
 void printDhtValues()
 {
   int temp = DHT.temperature;
@@ -226,10 +232,11 @@ void handleUserInput()
     }
     else if( BT_MSG.indexOf("set")>=0)
     {
-
+      
     }
-    else
+    else if (BT_MSG == "hist")
     {
+      DhtHistory.sendDataToBt(BT)
     }
   }
 
