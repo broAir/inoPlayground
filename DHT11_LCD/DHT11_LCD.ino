@@ -36,7 +36,7 @@ int Dt_SETTING = 1;
 
 bool TEMPSERVICE_LOCK = false; // to lock the climate control if we already heat or cool down the system
 bool USER_FAN_LOCK = false; // if user has requested fanning in the app
-int USER_FAN_LOCK_DT = 1000*60; // 1 minute user fan lock
+long USER_FAN_LOCK_DT = 1000; // 1 minute user fan lock
 
 String BT_MSG; // the data given from Computer
 
@@ -236,7 +236,7 @@ void handleUserInput()
     }
     else if (BT_MSG == "hist")
     {
-      DhtHistory.sendDataToBt(BT)
+      DhtHistory.sendDataToBt(BT);
     }
   }
 

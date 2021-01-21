@@ -31,4 +31,4 @@ public:
         }
         bluetooth.write(result.get());
     }
-}
+};
